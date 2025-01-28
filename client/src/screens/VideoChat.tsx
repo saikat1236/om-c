@@ -492,6 +492,7 @@ export default function VideoChat() {
               className="absolute inset-0 rounded-lg"
               url={myStream}
               playing
+              playsinline
               muted
               width="100%"
               height="100%"
@@ -516,6 +517,7 @@ export default function VideoChat() {
               className="absolute inset-0 rounded-lg"
               url={remoteStream}
               playing
+              playsinline
               muted={false}
               width="100%"
               height="100%"
