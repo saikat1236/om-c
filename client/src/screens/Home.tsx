@@ -16,7 +16,7 @@ export default function Home() {
       e.preventDefault();
       if (!socket) {
         // const newSocket = io(import.meta.env.VITE_API_SERVER_URL);
-        const newSocket = io("http://localhost:8000");
+        const newSocket = io("https://om-c.onrender.com");
         setSocket(newSocket);
       }
       navigate("/chat");
