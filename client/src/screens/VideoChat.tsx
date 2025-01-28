@@ -61,30 +61,36 @@ export default function VideoChat() {
   useEffect(() => {
     getUserStream();
   }, [getUserStream, myStream]);
+  const [tracksAdded, setTracksAdded] = useState(false);
 
   const sendStream = useCallback(() => {
-    if (myStream) {
-      // console.log("send Stream");
+    if (myStream && !tracksAdded) {
       const videoTrack = myStream.getVideoTracks()[0];
       const audioTrack = myStream.getAudioTracks()[0];
-
+  
+      console.log("Local Video Track: ", videoTrack);
+      console.log("Local Audio Track: ", audioTrack);
+  
       const senders = peerservice.peer.getSenders();
-
+  
       if (videoTrack) {
         const videoSender = senders.find((s) => s.track === videoTrack);
         if (!videoSender) {
-          peerservice.peer.addTrack(videoTrack, myStream); // Add video first
+          peerservice.peer.addTrack(videoTrack, myStream);
         }
       }
-
+  
       if (audioTrack) {
         const audioSender = senders.find((s) => s.track === audioTrack);
         if (!audioSender) {
-          peerservice.peer.addTrack(audioTrack, myStream); // Add audio second
+          peerservice.peer.addTrack(audioTrack, myStream);
         }
       }
+  
+      setTracksAdded(true); // Mark tracks as added
     }
-  }, [myStream]);
+  }, [myStream, tracksAdded]);
+  
 
   const handleScreenShare = useCallback(async () => {
     if (isScreenSharing) {
@@ -338,7 +344,8 @@ export default function VideoChat() {
   useEffect(() => {
     const handleTrackEvent = (event: RTCTrackEvent) => {
       const [incomingStream] = event.streams; // Get the MediaStream from event.streams
-      // console.log("Received track event:", event.track);
+      console.log("Received track event:", incomingStream);
+
       setRemoteStream(incomingStream);
     };
 
@@ -443,6 +450,17 @@ export default function VideoChat() {
     socket,
     userDisConnected
   ]);
+
+  useEffect(() => {
+    return () => {
+      myStream?.getTracks().forEach((track) => track.stop());
+      peerservice.peer.close();
+      setMyStream(null);
+      setRemoteStream(null);
+      setScreenStream(null);
+    };
+  }, []);
+
 
   const handleCleanup = useCallback(() => {
     // console.log("Cleaning up...");
@@ -549,9 +567,8 @@ export default function VideoChat() {
             <span className="hidden sm:inline">Stop</span>
           </Button>
           <Button
-            className={`flex-1 p-2 gap-2 bg-blue-600 text-white rounded-md ${
-              remoteSocketId === null ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            className={`flex-1 p-2 gap-2 bg-blue-600 text-white rounded-md ${remoteSocketId === null ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             size={"icon"}
             onClick={handleSkip}
             disabled={remoteSocketId === null}
