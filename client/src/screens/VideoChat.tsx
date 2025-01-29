@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSocket } from "../context/SocketProvider";
 import peerservice from "../service/peer";
 import ReactPlayer from "react-player";
@@ -9,6 +9,7 @@ import { ClipLoader } from "react-spinners"; // Import the spinner
 import { useTheme } from "../components/theme-provider";
 import { useNavigate } from "react-router-dom";
 import "../css/VideoChat.css";
+import { tr } from "framer-motion/client";
 
 interface Offer {
   offer: RTCSessionDescriptionInit;
@@ -41,56 +42,187 @@ export default function VideoChat() {
   const navigate = useNavigate();
 
   const loaderColor = theme.theme === "dark" ? "#D1D5DB" : "#4B5563";
-
-  const getUserStream = useCallback(async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        sampleRate: 48000, // CD-quality audio sample rate
-        sampleSize: 16, // Higher sample size
-        channelCount: 2 // Stereo audio
-      }
-    });
-    // const processedStream = processAudio(stream);
-    setMyStream(stream);
-  }, []);
-
-  useEffect(() => {
-    getUserStream();
-  }, [getUserStream, myStream]);
   const [tracksAdded, setTracksAdded] = useState(false);
 
+  // const getUserStream = useCallback(async () => {
+  //   navigator.mediaDevices.getUserMedia({
+  //     video: { width: { max: 640 }, height: { max: 480 }, frameRate: { max: 15 } },
+  //     // video: true,
+  //     // audio: {
+  //     //   echoCancellation: true,
+  //     //   noiseSuppression: true,
+  //     //   autoGainControl: true,
+  //     //   sampleRate: 48000, // CD-quality audio sample rate
+  //     //   sampleSize: 16, // Higher sample size
+  //     //   channelCount: 2 // Stereo audio
+  //     // }
+  //     audio: true
+  //   }).then((stream) => {
+  //     setMyStream(stream);
+  //   });
+  //   // const processedStream = processAudio(stream);
+  //   // setMyStream(stream);
+  // }, []);
+
+
+// more optimised way
+  // const getUserStream = useCallback(async () => {
+  //   try {
+  //     const constraints = {
+  //       video: {
+  //         width: { ideal: 640, max: 640 },  // Target 640px width (360p)
+  //         height: { ideal: 360, max: 360 }, // Target 360px height
+  //         frameRate: { max: 15 },           // Reduce FPS for better performance
+  //       },
+  //       audio: {
+  //         echoCancellation: true, 
+  //         noiseSuppression: true,
+  //         autoGainControl: true,
+  //         sampleRate: 32000,   // Optimize for low-bandwidth
+  //         sampleSize: 16,
+  //         channelCount: 1,     // Mono audio (better for calls)
+  //       }
+  //     };
+  
+  //     const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  //     setMyStream(stream);
+      
+  //     console.log("User media stream initialized:", stream);
+  //   } catch (error) {
+  //     console.error("Error accessing media:", error);
+  //   }
+  // }, []);
+  
+
+  // useEffect(() => {
+  //   getUserStream();
+  // }, [getUserStream, myStream]);
+
+
+  // more more optimised
+
+  const myStreamRef = useRef<MediaStream | null>(null);
+
+const getUserStream = useCallback(async () => {
+  if (myStreamRef.current) return; // ✅ Prevents re-fetching the stream
+
+  try {
+    const constraints = {
+      video: {
+        width: { ideal: 640, max: 640 },
+        height: { ideal: 360, max: 360 },
+        frameRate: { max: 15 },
+      },
+      audio: {
+        echoCancellation: true, 
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: 32000,
+        sampleSize: 16,
+        channelCount: 1,
+      },
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    myStreamRef.current = stream; // ✅ Uses ref to prevent re-renders
+    setMyStream(stream); 
+
+    console.log("User media stream initialized:", stream);
+  } catch (error) {
+    console.error("Error accessing media:", error);
+  }
+}, []);
+
+useEffect(() => {
+  getUserStream();
+}, [getUserStream]); // ✅ Runs only once
+
+
+  // const sendStream = useCallback(() => {
+  //   if (myStream && !tracksAdded) {
+  //     const videoTrack = myStream.getVideoTracks()[0];
+  //     const audioTrack = myStream.getAudioTracks()[0];
+  
+  //     console.log("Local Video Track: ", videoTrack);
+  //     console.log("Local Audio Track: ", audioTrack);
+  
+  //     const senders = peerservice.peer.getSenders();
+  
+  //     if (videoTrack) {
+  //       const videoSender = senders.find((s) => s.track === videoTrack);
+  //       if (!videoSender) {
+  //         peerservice.peer.addTrack(videoTrack, myStream);
+  //       }
+  //     }
+  
+  //     if (audioTrack) {
+  //       const audioSender = senders.find((s) => s.track === audioTrack);
+  //       if (!audioSender) {
+  //         peerservice.peer.addTrack(audioTrack, myStream);
+  //       }
+  //     }
+  
+  //     setTracksAdded(true); // Mark tracks as added
+  //   }
+  // }, [myStream, tracksAdded]);
+   
+  // more optimised way
+  // const [tracksAdded, setTracksAdded] = useState(false);
   const sendStream = useCallback(() => {
-    if (myStream && !tracksAdded) {
-      const videoTrack = myStream.getVideoTracks()[0];
-      const audioTrack = myStream.getAudioTracks()[0];
-  
-      console.log("Local Video Track: ", videoTrack);
-      console.log("Local Audio Track: ", audioTrack);
-  
-      const senders = peerservice.peer.getSenders();
-  
-      if (videoTrack) {
-        const videoSender = senders.find((s) => s.track === videoTrack);
-        if (!videoSender) {
-          peerservice.peer.addTrack(videoTrack, myStream);
-        }
+  if (myStream && !tracksAdded) {
+    const videoTrack = myStream.getVideoTracks()[0];
+    const audioTrack = myStream.getAudioTracks()[0];
+
+    console.log("Local Video Track:", videoTrack);
+    console.log("Local Audio Track:", audioTrack);
+
+    const senders = peerservice.peer.getSenders();
+    
+    // Apply bitrate & resolution limits
+    if (videoTrack) {
+      const videoSender = senders.find((s) => s.track === videoTrack);
+      if (!videoSender) {
+        peerservice.peer.addTrack(videoTrack, myStream);
       }
-  
-      if (audioTrack) {
-        const audioSender = senders.find((s) => s.track === audioTrack);
-        if (!audioSender) {
-          peerservice.peer.addTrack(audioTrack, myStream);
-        }
+
+      // Set video parameters
+      const params = videoSender?.getParameters();
+      if (params) {
+        if (!params.encodings) params.encodings = [{}];
+
+        params.encodings[0] = {
+          maxBitrate: 200 * 1000, // 200 kbps
+          scaleResolutionDownBy: 2, // Reduce resolution (720p → 360p)
+          maxFramerate: 20, // Limit FPS to 20
+        };
+
+        videoSender?.setParameters(params);
+        console.log("Updated Video Bitrate & Resolution:", params.encodings[0]);
       }
-  
-      setTracksAdded(true); // Mark tracks as added
     }
-  }, [myStream, tracksAdded]);
-  
+
+    if (audioTrack) {
+      const audioSender = senders.find((s) => s.track === audioTrack);
+      if (!audioSender) {
+        peerservice.peer.addTrack(audioTrack, myStream);
+      }
+
+      // Reduce audio bitrate
+      const audioParams = audioSender?.getParameters();
+      if (audioParams) {
+        if (!audioParams.encodings) audioParams.encodings = [{}];
+
+        audioParams.encodings[0].maxBitrate = 50 * 1000; // 50 kbps for audio
+        audioSender?.setParameters(audioParams);
+
+        console.log("Updated Audio Bitrate:", audioParams.encodings[0].maxBitrate);
+      }
+    }
+
+    setTracksAdded(true); // Mark tracks as added
+  }
+}, [myStream, tracksAdded]);
+
 
   const handleScreenShare = useCallback(async () => {
     if (isScreenSharing) {
@@ -357,7 +489,7 @@ export default function VideoChat() {
   }, [isScreenSharing, sendStream, flag]);
 
   const userDisConnected = useCallback(async () => {
-    // console.log("You've been skipped. Looking for a new user...");
+    console.log("You've been skipped. Looking for a new user...");
     setFlag(true);
     peerservice.peer.getTransceivers().forEach((transceiver) => {
       if (transceiver.stop) {
@@ -396,7 +528,7 @@ export default function VideoChat() {
   useEffect(() => {
     peerservice.peer.onicecandidate = (event) => {
       if (event.candidate) {
-        // console.log("Sending ICE candidate:", event.candidate);
+        console.log("New ICE candidate:", event.candidate);
         socket?.emit("ice-candidate", {
           candidate: event.candidate,
           to: remoteSocketId

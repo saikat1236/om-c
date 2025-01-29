@@ -30,6 +30,11 @@ class PeerService {
                     "stun:stun.voipstunt.com",
                     "stun:stun.services.mozilla.com"
                 ]
+            },
+            {
+                urls: "turn:w1.xirsys.com:80?transport=udp",
+                username: "89ddbf36-ccdc-11e8-b472-8624bbdc6721",
+                credential: "89ddbfb8-ccdc-11e8-8a3d-a2ce2294350d"
             }]
         });
     }

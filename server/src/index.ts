@@ -107,7 +107,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on("disconnect", () => {
-        // console.log(`User disconnected ${socket.id}`);
+        console.log(`User disconnected ${socket.id}`);
 
         const partnerId = userPairs[socket.id];
         // console.log(partnerId);

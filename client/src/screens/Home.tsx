@@ -8,20 +8,19 @@ import { Github } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
 export default function Home() {
-  const { socket, setSocket } = useSocket();
+  const { socket } = useSocket(); // No need for setSocket
   const navigate = useNavigate();
 
   const handleStartCall = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       e.preventDefault();
       if (!socket) {
-        // const newSocket = io(import.meta.env.VITE_API_SERVER_URL);
-        const newSocket = io("https://om-c.onrender.com");
-        setSocket(newSocket);
+        console.error("Socket not initialized! Make sure SocketProvider is wrapping the app.");
+        return;
       }
       navigate("/chat");
     },
-    [setSocket, socket, navigate]
+    [socket, navigate]
   );
 
   return (
